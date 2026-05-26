@@ -1,0 +1,103 @@
+# this is interesting, i obviously need to traverse the graph somehow
+# maybe DFS or BFS are both viable here
+
+# however, i almost wonder if simply checking which number in the adjacency list 
+# is repeated between each edge. maybe some clever way to do this is a good approach here
+
+# what about the DFS route though, where would you start? and BFS?
+
+# maybe its BFS with multiple starting points
+
+# before i go down that route, i need to try the simple stupid idea i had first
+# to see if any test case would fail it, well probably one where we keep a components
+# some data structure, as soon as we spot a new component, we would make space for it, then if 
+# suddenly we come across an adjacency that bridges two components we didnt have bridged before, we combine them
+# into 1 component. 
+
+# but hmm, what data structure helps here
+
+# okay i did this just using hashmaps and set, passed 2 first test cases but not the third, let's take a look at the third
+# n=5
+# edges=[[0,1],[1,2],[0,2],[3,4]]
+
+# i think what's sketchy is branch #4 down there
+# however its valid to subtract from component_count in that case
+# what's sketchy is my a != b function, i think we need to do a set overlap check instead of set != set
+
+# i was just using wrong vars, that worked, but we will revisit that overlap idea. now we're failing on test case:
+# n=4
+# edges=[[2,3],[1,2],[1,3]]
+# expected output: 2
+# actual output: 1
+
+# wait did i misread this problem? why is that expected output 2?
+# ah its because n is given as an input and n = 4 which means there is a lone node 4
+# in that case, i will keep a master set of all components, then iterate over n, incrementing
+# the component_count as an n appears that is not in the master set
+# actually i can just use component_lookup as this master set lol
+
+# woo okay 31/34 test cases pass, we failed on this one
+# n=10
+# edges=[[5,6],[0,2],[1,7],[5,9],[1,8],[3,4],[0,6],[0,7],[0,3],[8,9]]
+# Your Output: 0
+# Expected output: 1
+# this one is big, im going to draw it out 
+
+class Solution:
+    def countComponents(self, n: int, edges: List[List[int]]) -> int:
+        component_lookup = {}
+        component_count = 0
+
+        # first pass, counting components from adjacency list
+        for index, edge in enumerate(edges):
+            a = edge[0]
+            b = edge[1]
+
+            # there are a few cases:
+            # 1. a has no component and b has no component:
+            #    - index both in component_lookup sharing the same component set ref 
+            # 2. a has component and b has no component:
+            #    - index b in component_lookup, give it the same set ref as a, and add b to that set
+            # 3. b has no component and a has component (i dont know if this case is possible but we will handle it just in case)
+            #    - same as option 2 just inverse
+            # 4. a has component and b has component:
+            #    - the only case here is that if they're in separate components,
+            #      in which case we merge them
+
+            # 1
+            if a not in component_lookup and b not in component_lookup:
+                set_ref = set([a, b])
+                component_lookup[a] = set_ref
+                component_lookup[b] = set_ref
+                component_count += 1
+            # 2
+            elif a in component_lookup and b not in component_lookup:
+                component_lookup[a].add(b)
+                component_lookup[b] = component_lookup[a]
+            # 3
+            elif b in component_lookup and a not in component_lookup:
+                component_lookup[b].add(a)
+                component_lookup[a] = component_lookup[b]
+            # 4
+            elif a in component_lookup and b in component_lookup: 
+                a_component = component_lookup[a]
+                b_component = component_lookup[b]
+
+                # print(f"{a_component=} {b_component=}")
+
+                # merge both into a
+                if a_component != b_component:  
+                    component_lookup[a] = a_component | b_component
+                    component_lookup[b] = component_lookup[a]
+                    component_count = max(component_count - 1, 1)
+
+        # print(f"{component_lookup=}")
+
+        # second pass for every n we missed
+        # add it as a lone component
+        for i in range(n):
+            if i not in component_lookup:
+                component_count += 1
+
+        return component_count
+                
